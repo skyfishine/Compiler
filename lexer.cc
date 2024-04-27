@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iomanip>
 #include "lexer.h"
-#include "token.h"
 using namespace std;
 
 void Lexer::getchar()
@@ -43,14 +42,14 @@ void Lexer::retract()
     }
 }
 
-WordStruct Lexer::error(int i)
+Token Lexer::error(int i)
 {
     string err;
     switch (i)
     {
     case 1:
         ferror << "第" << line << "行 ";
-        ferror << "标识符长度过长 \"" << token << "\"" << endl; 
+        ferror << "标识符长度过长 \"" << token << "\"" << endl;
         break;
     case 2:
         ferror << "第" << line << "行 ";
@@ -113,7 +112,7 @@ char Lexer::type(char ch)
     return ch;
 }
 
-WordStruct Lexer::case_letter()
+Token Lexer::case_letter()
 {
     int len = 0;
     while (letter() || digit())
@@ -123,7 +122,8 @@ WordStruct Lexer::case_letter()
         ++len;
     }
     retract();
-    if(len > 16) {
+    if (len > 16)
+    {
         return error(1);
     }
     int c = reserve();
@@ -136,7 +136,7 @@ WordStruct Lexer::case_letter()
         return {c, 0, token}; // 关键字
 }
 
-WordStruct Lexer::case_number()
+Token Lexer::case_number()
 {
     int len = 0;
     while (digit())
@@ -146,22 +146,25 @@ WordStruct Lexer::case_number()
         ++len;
     }
     retract();
-    if(len>16) {
+    if (len > 16)
+    {
         return error(3);
     }
     int val = dtb();
     return {$INT, val, token};
 }
 
-WordStruct Lexer::case_lt()
+Token Lexer::case_lt()
 {
     concat();
     getchar();
-    if (cha == '=') {
+    if (cha == '=')
+    {
         concat();
         return {$LE, 0, token};
     }
-    else if (cha == '>'){
+    else if (cha == '>')
+    {
         concat();
         return {$NE, 0, token};
     }
@@ -169,7 +172,7 @@ WordStruct Lexer::case_lt()
     return {$LT, 0, token};
 }
 
-WordStruct Lexer::case_gt()
+Token Lexer::case_gt()
 {
     getchar();
     if (cha == '=')
@@ -178,11 +181,12 @@ WordStruct Lexer::case_gt()
     return {$GT, 0, ">"};
 }
 
-WordStruct Lexer::case_assign()
+Token Lexer::case_assign()
 {
     concat();
     getchar();
-    if (cha == '='){
+    if (cha == '=')
+    {
         concat();
         return {$ASSIGN, 0, token};
     }
@@ -190,7 +194,7 @@ WordStruct Lexer::case_assign()
         return error(2);
 }
 
-WordStruct Lexer::analyzeWord()
+Token Lexer::analyzeWord()
 {
     token.clear();
     getchar();
@@ -228,7 +232,7 @@ WordStruct Lexer::analyzeWord()
     default:
         return error(2);
     }
-    return WordStruct();
+    //return Token();
 }
 
 void Lexer::createReserveMap()
@@ -269,15 +273,32 @@ Lexer::~Lexer()
     ferror.close();
 }
 
-void Lexer::dump(WordStruct ws)
+void Lexer::dump(Token ws)
 {
-    if(ws.type == $ERROR) return;
+    if (ws.type == $ERROR)
+        return;
     fout << setw(16) << setfill(' ') << ws.original_value;
     fout << ' ';
     fout << setw(2) << setfill('0') << ws.type;
     if (ws.type != $EOF)
         fout << endl;
 }
+
+Token Lexer::analyzeAndDumpWord() {
+    Token tk;
+    if(!fin.eof()) {
+        do {
+            tk = analyzeWord();
+            dump(tk);
+        }while(tk.type==$EOLN);
+    } else {
+        tk = {$EOF, 0, "EOF"};
+        dump(tk);
+    }
+    return tk;
+}
+
+
 void Lexer::LexicalAnalyze()
 {
     while (!fin.eof())

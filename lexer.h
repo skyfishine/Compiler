@@ -3,14 +3,8 @@
 #include <unordered_map>
 #include <fstream>
 #include <iostream>
+#include "token.h"
 using namespace std;
-
-struct WordStruct
-{
-    int type;
-    int value;
-    string original_value;
-};
 
 class Lexer
 {
@@ -50,23 +44,23 @@ private:
 
     // 处理出现的词法错误
     // 非法字符、不正确常量...
-    WordStruct error(int);
+    Token error(int);
 
     char type(char);
 
     void createReserveMap();
 
-    WordStruct case_letter();
-    WordStruct case_number();
-    WordStruct case_lt();
-    WordStruct case_gt();
-    WordStruct case_assign();
+    Token case_letter();
+    Token case_number();
+    Token case_lt();
+    Token case_gt();
+    Token case_assign();
 
-    WordStruct analyzeWord();
-
-    void dump(WordStruct ws);
+    void dump(Token ws);
 
 public:
+    Token analyzeWord();
+    Token analyzeAndDumpWord();
     Lexer(string in_filepath, string out_filepath, string error_path);
     Lexer(string in_filapath);
     ~Lexer();

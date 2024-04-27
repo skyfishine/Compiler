@@ -1,11 +1,17 @@
-all: a.out
+SRCS = main.cc lexer.cc parser.cc symbol.cc
+TARGET = a.out
 
-a.out: main.cc lexer.cc
-	g++ main.cc lexer.cc
+all: $(TARGET)
 
-run: a.out
-	./a.out
+$(TARGET): $(SRCS)
+	g++ $(SRCS)
 
-gdb: main.cc lexer.cc
-	g++ -g main.cc lexer.cc
-	gdb a.out
+run: $(TARGET)
+	./$(TARGET)
+
+gdb: $(SRCS)
+	g++ -g $(SRCS)
+	gdb $(TARGET)
+
+clean:
+	rm -f test.dyd test.err test.pro test.var a.out
