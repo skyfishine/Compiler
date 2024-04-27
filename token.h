@@ -32,16 +32,15 @@ using namespace std;
 
 struct Token
 {
-    TOKEN_TYPE type;
-    int value;
-    string original_value;
-    Token():type($ERROR){}
-    Token(TOKEN_TYPE type) : type(type) {}
-    Token(TOKEN_TYPE type, int value, const string& original_value)
-        : type(type), value(value), original_value(original_value){}
+    TOKEN_TYPE type;        // token类型
+    string original_value;  // 原始内容，例如数字or标识符名
+    int line;               // token所在行号
+    Token():type($ERROR), line(-1){}
+    Token(TOKEN_TYPE type) : type(type), line(-1) {}
+    Token(TOKEN_TYPE type, const string& original_value, int line)
+        : type(type), original_value(original_value), line(line){}
     Token& operator=(const Token& token) {
         type = token.type;
-        value = token.value;
         original_value = token.original_value;
         return *this;
     }

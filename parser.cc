@@ -2,14 +2,8 @@
 #include <assert.h>
 using namespace std;
 
-// Parser::Parser() : proc_level(0), var_level(0), proc_index(0), var_index(0)
-// {
-//     sym = lexer.analyzeWord();
-//     vartable = VarTable::getInstance();
-//     proctable = ProcTable::getInstance();
-// }
-
-Parser::Parser(string in_filepath) : lexer(in_filepath), proc_level(0), var_level(0), proc_index(0), var_index(0), look($ERROR)
+Parser::Parser(string in_filepath)
+    : lexer(in_filepath), look($ERROR), var_level(0), var_index(0), proc_level(0), proc_index(0)
 {
     string filename = in_filepath.substr(0, in_filepath.find('.'));
     string var_filepath = filename + ".var";
@@ -128,7 +122,7 @@ void Parser::ExplanStmt()
         Token id = Ident();
         int prev_proc = proc_index;
         int prev_var_table_index = var_table_index;
-        int prev_var_index = var_index;  // 防止函数声明在变量声明前面
+        int prev_var_index = var_index; // 防止函数声明在变量声明前面
         var_level++;
         var_index = 0;
         var_table_index = -1;

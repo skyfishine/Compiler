@@ -4,7 +4,7 @@ TARGET = a.out
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	g++ $(SRCS)
+	g++ -Wall -Werror $(SRCS)
 
 run: $(TARGET)
 	./$(TARGET)

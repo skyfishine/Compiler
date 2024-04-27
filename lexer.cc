@@ -61,7 +61,7 @@ Token Lexer::error(int i)
     default:
         break;
     }
-    return {$ERROR, 0, "ERROR"};
+    return {$ERROR, "ERROR", line};
 }
 
 bool Lexer::letter()
@@ -89,16 +89,6 @@ int Lexer::reserve()
     {
         return 0;
     }
-}
-
-int Lexer::buildlist()
-{
-    return 0;
-}
-
-int Lexer::dtb()
-{
-    return 0;
 }
 
 char Lexer::type(char ch)
@@ -129,11 +119,10 @@ Token Lexer::case_letter()
     int c = reserve();
     if (c == 0)
     {
-        int val = buildlist();
-        return {$ID, val, token};
+        return {$ID, token, line};
     }
     else
-        return {c, 0, token}; // 关键字
+        return {c, token, line}; // 关键字
 }
 
 Token Lexer::case_number()
@@ -150,8 +139,7 @@ Token Lexer::case_number()
     {
         return error(3);
     }
-    int val = dtb();
-    return {$INT, val, token};
+    return {$INT, token, line};
 }
 
 Token Lexer::case_lt()
@@ -161,24 +149,24 @@ Token Lexer::case_lt()
     if (cha == '=')
     {
         concat();
-        return {$LE, 0, token};
+        return {$LE, token, line};
     }
     else if (cha == '>')
     {
         concat();
-        return {$NE, 0, token};
+        return {$NE, token, line};
     }
     retract();
-    return {$LT, 0, token};
+    return {$LT, token, line};
 }
 
 Token Lexer::case_gt()
 {
     getchar();
     if (cha == '=')
-        return {$GE, 0, ">="};
+        return {$GE, ">=", line};
     retract();
-    return {$GT, 0, ">"};
+    return {$GT, ">", line};
 }
 
 Token Lexer::case_assign()
@@ -188,7 +176,7 @@ Token Lexer::case_assign()
     if (cha == '=')
     {
         concat();
-        return {$ASSIGN, 0, token};
+        return {$ASSIGN, token, line};
     }
     else
         return error(2);
@@ -208,17 +196,17 @@ Token Lexer::analyzeWord()
     case '0':
         return case_number();
     case '=':
-        return {$EQ, 0, "="};
+        return {$EQ, "=", line};
     case '-':
-        return {$SUB, 0, "-"};
+        return {$SUB, "-", line};
     case '*':
-        return {$MUL, 0, "*"};
+        return {$MUL, "*", line};
     case '(':
-        return {$LPAR, 0, "("};
+        return {$LPAR, "(", line};
     case ')':
-        return {$RPAR, 0, ")"};
+        return {$RPAR, ")", line};
     case ';':
-        return {$SEM, 0, ";"};
+        return {$SEM, ";", line};
     case '<':
         return case_lt();
     case '>':
@@ -226,13 +214,13 @@ Token Lexer::analyzeWord()
     case ':':
         return case_assign();
     case '\n':
-        return {$EOLN, 0, "EOLN"};
+        return {$EOLN, "EOLN", line};
     case -1:
-        return {$EOF, 0, "EOF"};
+        return {$EOF, "EOF", line};
     default:
         return error(2);
     }
-    //return Token();
+    // return Token();
 }
 
 void Lexer::createReserveMap()
@@ -284,20 +272,24 @@ void Lexer::dump(Token ws)
         fout << endl;
 }
 
-Token Lexer::analyzeAndDumpWord() {
+Token Lexer::analyzeAndDumpWord()
+{
     Token tk;
-    if(!fin.eof()) {
-        do {
+    if (!fin.eof())
+    {
+        do
+        {
             tk = analyzeWord();
             dump(tk);
-        }while(tk.type==$EOLN);
-    } else {
-        tk = {$EOF, 0, "EOF"};
+        } while (tk.type == $EOLN);
+    }
+    else
+    {
+        tk = {$EOF, "EOF", line};
         dump(tk);
     }
     return tk;
 }
-
 
 void Lexer::LexicalAnalyze()
 {
@@ -305,5 +297,5 @@ void Lexer::LexicalAnalyze()
     {
         dump(analyzeWord());
     }
-    dump({$EOF, 0, "EOF"});
+    dump({$EOF, "EOF", line});
 }

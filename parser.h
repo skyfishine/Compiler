@@ -12,7 +12,7 @@ class Parser
 private:
     Lexer lexer;
     Token sym;                // 即将匹配的符号
-    Token look;               // 用于超前查看
+    Token look;               // 用于超前查看，若type为error，则表示没有超前查看
     ofstream fvar, fpro;      // 变量名表，过程名表
     int var_level;            // 当前变量层次
     int var_index;            // 当前变量是当前过程中的第几个变量
