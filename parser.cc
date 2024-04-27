@@ -69,25 +69,33 @@ void Parser::match_error(const Token &tk, const string &expect)
     assert(0);
 }
 
-void Parser::var_isdefined(const Token &tk)
+bool Parser::double_defined_error(const Token &tk)
 {
-    if (!vartable->find(tk.original_value, var_first_index, var_last_index) && tk.original_value != proctable->getProcName(proc_index))
+    if (var_first_index != -1 &&
+        vartable->find(tk.original_value, var_first_index, var_last_index))
     {
-        notdefined_error(tk);
+        string message = "符号\"" + tk.original_value + "\"重复定义";
+        perror->printError(tk.line, message);
+        return true;
     }
+    return false;
 }
 
 void Parser::notdefined_error(const Token &tk)
 {
-    string message = "符号\"" + tk.original_value + "\"未定义";
-    perror->printError(tk.line, message);
-    assert(0);
+    if (var_first_index == -1 ||
+        (!vartable->find(tk.original_value, var_first_index, var_last_index) &&
+         tk.original_value != proctable->getProcName(proc_index)))
+    {
+        string message = "符号\"" + tk.original_value + "\"未定义";
+        perror->printError(tk.line, message);
+    }
 }
 
 void Parser::Procedure()
 {
     SubProgram();
-    lexer.analyzeAndDumpWord();  // 最后输出eof
+    lexer.analyzeAndDumpWord(); // 最后输出eof
     vartable->dump(fvar);
     proctable->dump(fpro);
 }
@@ -181,6 +189,10 @@ void Parser::ExplanStmt()
         {
             kind = FORMAL_PARAM;
         }
+        if (double_defined_error(token))
+        {
+            return;
+        }
         // 加入到变量表
         var_last_index = vartable->add(token.original_value, proctable->getProcName(proc_index), kind, INT, var_level);
         // 如果是当前过程的第一个变量
@@ -254,14 +266,14 @@ void Parser::ExecStmt()
         advance();
         match($LPAR);
         tk = Var();
-        var_isdefined(tk);
+        notdefined_error(tk);
         match($RPAR);
         break;
     case $WRITE:
         advance();
         match($LPAR);
         tk = Var();
-        var_isdefined(tk);
+        notdefined_error(tk);
         match($RPAR);
         break;
     case $IF:
@@ -274,7 +286,7 @@ void Parser::ExecStmt()
         break;
     default:
         tk = Var();
-        var_isdefined(tk);
+        notdefined_error(tk);
         match($ASSIGN);
         ArithExp();
         break;
@@ -328,7 +340,7 @@ void Parser::Factor()
         }
         else
         {
-            var_isdefined(tk);
+            notdefined_error(tk);
         }
     }
     else

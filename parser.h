@@ -38,8 +38,7 @@ private:
     // 符号不匹配错误
     void match_error(const Token &tk, const string &expect);
 
-    // 判断当前变量是否在符号表中定义（当前过程下）
-    void var_isdefined(const Token &tk);
+    bool double_defined_error(const Token &tk);
 
     // 符号未定义错误
     void notdefined_error(const Token &tk);
