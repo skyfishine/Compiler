@@ -13,7 +13,8 @@ private:
     char cha;     // 存放最新读入的字符
     string token; // 存放已读入的字符序列
     ifstream fin;
-    ofstream fout;
+    ofstream fdyd;
+    ofstream fdys;     // 实验要求，再在dys中输出dyd
     int line;          // 存储当前行号
     char retract_char; // 存储回退的字符
 
@@ -57,8 +58,7 @@ private:
     Token case_lt();
     Token case_gt();
     Token case_assign();
-
-    void dump(Token ws);
+    void dump(ofstream &out, const Token &ws);
 
 public:
     // 分析一个token
@@ -67,7 +67,6 @@ public:
     Token analyzeAndDumpWord();
     // 单独进行完整的词法分析
     void LexicalAnalyze();
-    Lexer(const string &in_filepath, const string &out_filepath, const string &error_filepath);
     Lexer(const string &in_filepath);
     ~Lexer();
 };

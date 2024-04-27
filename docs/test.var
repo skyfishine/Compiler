@@ -1,0 +1,4 @@
+           vname           vproc    vkind      vtype    vlev    vadr
+               k            main        0    INTEGER       0       0
+               m            main        0    INTEGER       0       1
+               n               f        1    INTEGER       1       2

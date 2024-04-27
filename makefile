@@ -14,4 +14,4 @@ gdb: $(SRCS)
 	gdb $(TARGET)
 
 clean:
-	rm -f test.dyd test.err test.pro test.var a.out
+	rm -f test.dyd test.err test.pro test.var a.out test.dys

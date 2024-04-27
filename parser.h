@@ -16,8 +16,8 @@ private:
     Token look;               // 用于超前查看，若type为error，则表示没有超前查看
     ofstream fvar, fpro;      // 变量名表，过程名表
     int var_level;            // 当前变量层次
-    int var_index;            // 当前变量是当前过程中的第几个变量
-    int var_table_index;      // 当前变量在符号表中的位置
+    int var_first_index;      // 当前过程第一个变量在符号表的位置
+    int var_last_index;       // 当前过程最后一个变量在符号表的位置
     int proc_level;           // 当前过程层次
     int proc_index;           // 当前过程在过程表的下标
     list<string> formal_vars; // 形参列表
@@ -37,6 +37,12 @@ private:
     // 错误处理程序
     // 符号不匹配错误
     void match_error(const Token &tk, const string &expect);
+
+    // 判断当前变量是否在符号表中定义（当前过程下）
+    void var_isdefined(const Token &tk);
+
+    // 符号未定义错误
+    void notdefined_error(const Token &tk);
 
     // 判断当前变量是否为形参
     bool isInFormalList(const string &var);

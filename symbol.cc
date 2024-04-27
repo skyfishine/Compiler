@@ -1,5 +1,6 @@
-#include "symbol.h"
 #include <iomanip>
+#include <assert.h>
+#include "symbol.h"
 
 VarTable *VarTable::vartable = nullptr;
 ProcTable *ProcTable::proctable = nullptr;
@@ -26,6 +27,18 @@ int VarTable::add(string vname, string vproc, VKIND vkind, VTYPE vtype, int vlev
 {
     table.emplace_back(vname, vproc, vkind, vtype, vlevel, table.size());
     return table.size() - 1;
+}
+
+bool VarTable::find(const string &varname, int start, int end)
+{
+    assert(start>=0 && start<(int)table.size());
+    assert(end>=0 && end < (int)table.size());
+    for(int i=start;i<=end;i++) {
+        if(table[i].vname == varname) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void VarTable::dump(ofstream &out)
@@ -57,15 +70,6 @@ int ProcTable::add(string pnmae, VTYPE ptype, int plev)
     return table.size() - 1;
 }
 
-void ProcTable::fillFirstVar(int index, int fadr)
-{
-    table[index].fadr = fadr;
-}
-void ProcTable::fillLastVar(int index, int ladr)
-{
-    table[index].ladr = ladr;
-}
-
 string ProcTable::getProcName(int index)
 {
     return table[index].pname;
@@ -78,14 +82,22 @@ void ProcTable::dump(ofstream &out)
     out << setw(8) << "plev";
     out << setw(8) << "fadr";
     out << setw(8) << "ladr";
-    for(const Proc& proc : table) {
+    for (const Proc &proc : table)
+    {
         out << endl;
         string type = "INTEGER";
-        if(proc.ptype == VOID) type = "VOID";
+        if (proc.ptype == VOID)
+            type = "VOID";
         out << setw(16) << proc.pname;
         out << setw(11) << type;
         out << setw(8) << proc.plev;
         out << setw(8) << proc.fadr;
         out << setw(8) << proc.ladr;
     }
+}
+
+void ProcTable::fillVarIndex(int index, int fadr, int ladr)
+{
+    table[index].fadr = fadr;
+    table[index].ladr = ladr;
 }

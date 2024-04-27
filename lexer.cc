@@ -20,10 +20,9 @@ void Lexer::getchar()
             cha = -1;
             return;
         }
-
-        if (cha == '\n')
-            line++;
     }
+    if (cha == '\n')
+        line++;
 }
 
 void Lexer::getnb()
@@ -226,6 +225,7 @@ Token Lexer::analyzeWord()
 
 void Lexer::createReserveMap()
 {
+    if(!reserve_map.empty()) return;
     reserve_map["begin"] = $BEGIN;
     reserve_map["end"] = $END;
     reserve_map["integer"] = $INTEGER;
@@ -237,41 +237,38 @@ void Lexer::createReserveMap()
     reserve_map["write"] = $WRITE;
 }
 
-Lexer::Lexer(const string &in_filepath, const string &out_filepath, const string &error_filepath) : line(1), retract_char(0)
-{
-    createReserveMap();
-    fin.open(in_filepath, ios::in);
-    fout.open(out_filepath, ios::out);
-    perror = Error::getInstance();
-    perror->initError(error_filepath);
 
-}
-
-Lexer::Lexer(const string &in_filepath)
+Lexer::Lexer(const string &in_filepath): line(1), retract_char(0)
 {
 
     string filename = in_filepath.substr(0, in_filepath.find('.'));
-    string out_filepath = filename + ".dyd";
+    string dyd_filepath = filename + ".dyd";
     string error_filepath = filename + ".err";
-    // placement new
-    new (this) Lexer(in_filepath, out_filepath, error_filepath);
+    string dys_filepath = filename + ".dys";
+    createReserveMap();
+    fin.open(in_filepath, ios::in);
+    fdyd.open(dyd_filepath, ios::out);
+    fdys.open(dys_filepath, ios::out);
+    perror = Error::getInstance();
+    perror->initError(error_filepath);
 }
 
 Lexer::~Lexer()
 {
     fin.close();
-    fout.close();
+    fdyd.close();
 }
 
-void Lexer::dump(Token ws)
+void Lexer::dump(ofstream &out, const Token &ws)
 {
     if (ws.type == $ERROR)
         return;
-    fout << setw(16) << setfill(' ') << ws.original_value;
-    fout << ' ';
-    fout << setw(2) << setfill('0') << ws.type;
+    out << setw(16) << setfill(' ') << ws.original_value;
+    out << ' ';
+    out << setw(2) << setfill('0') << ws.type;
+    // out << setw(4) << setfill(' ') << ws.line;
     if (ws.type != $EOF)
-        fout << endl;
+        out << endl;
 }
 
 Token Lexer::analyzeAndDumpWord()
@@ -282,13 +279,15 @@ Token Lexer::analyzeAndDumpWord()
         do
         {
             tk = analyzeWord();
-            dump(tk);
+            dump(fdyd, tk);
+            dump(fdys, tk);
         } while (tk.type == $EOLN);
     }
     else
     {
         tk = {$EOF, "EOF", line};
-        dump(tk);
+        dump(fdyd, tk);
+        dump(fdys, tk);
     }
     return tk;
 }
@@ -297,7 +296,8 @@ void Lexer::LexicalAnalyze()
 {
     while (!fin.eof())
     {
-        dump(analyzeWord());
+        Token tk = analyzeWord();
+        dump(fdyd, tk);
     }
-    dump({$EOF, "EOF", line});
+    dump(fdyd, {$EOF, "EOF", line});
 }

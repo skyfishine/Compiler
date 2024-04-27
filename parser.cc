@@ -6,7 +6,7 @@ using namespace std;
 unordered_map<TOKEN_TYPE, string> Token::typesname;
 
 Parser::Parser(string in_filepath)
-    : lexer(in_filepath), look($ERROR), var_level(0), var_index(0), proc_level(0), proc_index(0)
+    : lexer(in_filepath), look($ERROR), var_level(0), var_first_index(-1), var_last_index(-1), proc_level(0), proc_index(0)
 {
     string filename = in_filepath.substr(0, in_filepath.find('.'));
     string var_filepath = filename + ".var";
@@ -69,9 +69,25 @@ void Parser::match_error(const Token &tk, const string &expect)
     assert(0);
 }
 
+void Parser::var_isdefined(const Token &tk)
+{
+    if (!vartable->find(tk.original_value, var_first_index, var_last_index) && tk.original_value != proctable->getProcName(proc_index))
+    {
+        notdefined_error(tk);
+    }
+}
+
+void Parser::notdefined_error(const Token &tk)
+{
+    string message = "符号\"" + tk.original_value + "\"未定义";
+    perror->printError(tk.line, message);
+    assert(0);
+}
+
 void Parser::Procedure()
 {
     SubProgram();
+    lexer.analyzeAndDumpWord();  // 最后输出eof
     vartable->dump(fvar);
     proctable->dump(fpro);
 }
@@ -83,7 +99,7 @@ void Parser::SubProgram()
     match($BEGIN);
     ExplanStmtTlb();
     // 说明语句结束，回填
-    proctable->fillLastVar(proc_index, var_table_index);
+    proctable->fillVarIndex(proc_index, var_first_index, var_last_index);
     match($SEM);
     ExecStmtTlb();
 }
@@ -132,11 +148,15 @@ void Parser::ExplanStmt()
         advance();
         Token id = Ident();
         int prev_proc = proc_index;
-        int prev_var_table_index = var_table_index;
-        int prev_var_index = var_index; // 暂存，防止函数声明在变量声明前面
+        // 暂存，防止函数声明在变量声明前面
+        // TODO：其实可能没什么意义？因为这样的话中间函数声明的变量会被当成当前函数的
+        // 实际上，用proc的数组，然后每个proc中有多个variable，这样的结构更好
+        // 但是懒得改代码了！
+        int prev_var_first_index = var_first_index;
+        int prev_var_last_index = var_last_index;
         var_level++;
-        var_index = 0;
-        var_table_index = -1;
+        var_first_index = -1;
+        var_last_index = -1;
         proc_level++;
         proc_index = proctable->add(id.original_value, INT, proc_level);
         match($LPAR);
@@ -148,8 +168,8 @@ void Parser::ExplanStmt()
         var_level--;
         proc_level--;
         proc_index = prev_proc;
-        var_table_index = prev_var_table_index;
-        var_index = prev_var_index;
+        var_first_index = prev_var_first_index;
+        var_last_index = prev_var_last_index;
     }
     // 变量说明语句
     else
@@ -162,13 +182,12 @@ void Parser::ExplanStmt()
             kind = FORMAL_PARAM;
         }
         // 加入到变量表
-        var_table_index = vartable->add(token.original_value, proctable->getProcName(proc_index), kind, INT, var_level);
-        // 如果是当前过程的第一个变量，那么更新过程名表
-        if (var_index == 0)
+        var_last_index = vartable->add(token.original_value, proctable->getProcName(proc_index), kind, INT, var_level);
+        // 如果是当前过程的第一个变量
+        if (var_first_index == -1)
         {
-            proctable->fillFirstVar(proc_index, var_table_index);
+            var_first_index = var_last_index;
         }
-        var_index++;
 
         // error 可能要错误处理
     }
@@ -204,7 +223,7 @@ void Parser::FuncBody()
     match($BEGIN);
     ExplanStmtTlb();
     // 声明语句完毕，所有变量都声明完了，所以可以更新过程名表
-    proctable->fillLastVar(proc_index, var_table_index);
+    proctable->fillVarIndex(proc_index, var_first_index, var_last_index);
     match($SEM);
     ExecStmtTlb();
     match($END);
@@ -228,18 +247,21 @@ void Parser::ExecStmtTlb_()
 
 void Parser::ExecStmt()
 {
+    Token tk;
     switch (sym.type)
     {
     case $READ:
         advance();
         match($LPAR);
-        Var();
+        tk = Var();
+        var_isdefined(tk);
         match($RPAR);
         break;
     case $WRITE:
         advance();
         match($LPAR);
-        Var();
+        tk = Var();
+        var_isdefined(tk);
         match($RPAR);
         break;
     case $IF:
@@ -251,7 +273,8 @@ void Parser::ExecStmt()
         ExecStmt();
         break;
     default:
-        Var();
+        tk = Var();
+        var_isdefined(tk);
         match($ASSIGN);
         ArithExp();
         break;
@@ -292,14 +315,20 @@ void Parser::Item_()
 
 void Parser::Factor()
 {
+    // 标识符or函数调用
     if (sym.type == $ID)
     {
+        Token tk = sym;
         advance();
         if (sym.type == $LPAR)
         {
             advance();
             ArithExp();
             match($RPAR);
+        }
+        else
+        {
+            var_isdefined(tk);
         }
     }
     else
