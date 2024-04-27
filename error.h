@@ -6,9 +6,9 @@ using namespace std;
 class Error
 {
 private:
-    static Error* error;
+    static Error *error;
     ofstream ferror;
-    Error(){ }
+    Error() {}
 
 public:
     static Error *getInstance();
@@ -17,7 +17,5 @@ public:
 
     Error(Error const &) = delete;
     Error &operator=(Error const &) = delete;
-    ~Error() = default;
+    ~Error();
 };
-// 全局的Error指针
-extern Error *error;

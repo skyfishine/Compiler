@@ -1,7 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <assert.h>
 #include "lexer.h"
+#include "error.h"
 using namespace std;
 
 void Lexer::getchar()
@@ -44,23 +46,22 @@ void Lexer::retract()
 
 Token Lexer::error(int i)
 {
-    string err;
+    string message;
     switch (i)
     {
     case 1:
-        ferror << "第" << line << "行 ";
-        ferror << "标识符长度过长 \"" << token << "\"" << endl;
+        message = "标识符长度过长 \"" + token + "\"";
         break;
     case 2:
-        ferror << "第" << line << "行 ";
-        ferror << "非法字符 \"" << cha << "\"" << endl;
+        message = "非法字符 \"" + to_string(cha) + "\"";
         break;
     case 3:
-        ferror << "第" << line << "行 ";
-        ferror << "常数常量太大 \"" << token << "\"" << endl;
+        message = "常数常量太大 \"" + token + "\"";
     default:
+        assert(0);
         break;
     }
+    perror->printError(line, message);
     return {$ERROR, "ERROR", line};
 }
 
@@ -236,15 +237,17 @@ void Lexer::createReserveMap()
     reserve_map["write"] = $WRITE;
 }
 
-Lexer::Lexer(string in_filepath, string out_filepath, string error_filepath) : line(1), retract_char(0)
+Lexer::Lexer(const string &in_filepath, const string &out_filepath, const string &error_filepath) : line(1), retract_char(0)
 {
     createReserveMap();
     fin.open(in_filepath, ios::in);
     fout.open(out_filepath, ios::out);
-    ferror.open(error_filepath, ios::out);
+    perror = Error::getInstance();
+    perror->initError(error_filepath);
+
 }
 
-Lexer::Lexer(string in_filepath)
+Lexer::Lexer(const string &in_filepath)
 {
 
     string filename = in_filepath.substr(0, in_filepath.find('.'));
@@ -258,7 +261,6 @@ Lexer::~Lexer()
 {
     fin.close();
     fout.close();
-    ferror.close();
 }
 
 void Lexer::dump(Token ws)

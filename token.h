@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <unordered_map>
 using namespace std;
 #define $BEGIN 1
 #define $END 2
@@ -32,16 +33,17 @@ using namespace std;
 
 struct Token
 {
-    TOKEN_TYPE type;        // token类型
-    string original_value;  // 原始内容，例如数字or标识符名
-    int line;               // token所在行号
-    Token():type($ERROR), line(-1){}
+    static unordered_map<TOKEN_TYPE, string> typesname;
+    TOKEN_TYPE type;       // token类型
+    string original_value; // 原始内容，例如数字or标识符名
+    int line;              // token所在行号
+
+    Token() : type($ERROR), line(-1) {}
     Token(TOKEN_TYPE type) : type(type), line(-1) {}
-    Token(TOKEN_TYPE type, const string& original_value, int line)
-        : type(type), original_value(original_value), line(line){}
-    Token& operator=(const Token& token) {
-        type = token.type;
-        original_value = token.original_value;
-        return *this;
-    }
+    Token(TOKEN_TYPE type, const string &original_value, int line)
+        : type(type), original_value(original_value), line(line) {}
+    Token(const Token &) = default;
+    Token &operator=(const Token &) = default;
+    
+    static void initTypeNames();
 };

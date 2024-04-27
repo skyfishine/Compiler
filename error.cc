@@ -1,7 +1,6 @@
 #include "error.h"
 
-// 全局的指针
-Error *error = Error::getInstance();
+Error *Error::error = nullptr;
 
 Error *Error::getInstance()
 {
@@ -9,10 +8,7 @@ Error *Error::getInstance()
     {
         error = new Error();
     }
-    else
-    {
-        return error;
-    }
+    return error;
 }
 void Error::initError(const string &ferror_path)
 {
@@ -21,6 +17,11 @@ void Error::initError(const string &ferror_path)
 
 void Error::printError(int line, string message)
 {
-    ferror << "第" << line << "行";
+    ferror << "第" << line << "行\t";
     ferror << message << endl;
+}
+
+Error::~Error()
+{
+    ferror.close();
 }

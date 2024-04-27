@@ -4,6 +4,7 @@
 #include "token.h"
 #include "lexer.h"
 #include "symbol.h"
+#include "error.h"
 
 using namespace std;
 
@@ -22,6 +23,7 @@ private:
     list<string> formal_vars; // 形参列表
     VarTable *vartable;       // 变量名表
     ProcTable *proctable;     // 过程名表
+    Error *perror;
 
     // 匹配单词符号，读入下一符号
     void advance();
@@ -31,6 +33,10 @@ private:
 
     // 匹配单词符号,并读入下一符号
     void match(TOKEN_TYPE t);
+
+    // 错误处理程序
+    // 符号不匹配错误
+    void match_error(const Token &tk, const string &expect);
 
     // 判断当前变量是否为形参
     bool isInFormalList(const string &var);

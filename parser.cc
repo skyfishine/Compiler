@@ -1,6 +1,9 @@
 #include "parser.h"
 #include <assert.h>
+#include "error.h"
 using namespace std;
+
+unordered_map<TOKEN_TYPE, string> Token::typesname;
 
 Parser::Parser(string in_filepath)
     : lexer(in_filepath), look($ERROR), var_level(0), var_index(0), proc_level(0), proc_index(0)
@@ -8,11 +11,13 @@ Parser::Parser(string in_filepath)
     string filename = in_filepath.substr(0, in_filepath.find('.'));
     string var_filepath = filename + ".var";
     string pro_filepath = filename + ".pro";
-    fvar.open(var_filepath);
-    fpro.open(pro_filepath);
+    fvar.open(var_filepath, ios::out);
+    fpro.open(pro_filepath, ios::out);
+    perror = Error::getInstance();
     advance();
     vartable = VarTable::getInstance();
     proctable = ProcTable::getInstance();
+    Token::initTypeNames();
 }
 
 void Parser::analyze()
@@ -47,15 +52,21 @@ void Parser::lookahead()
 void Parser::match(TOKEN_TYPE t)
 {
 
-    assert(sym.type == t);
     if (sym.type == t)
     {
         advance();
     }
     else
     {
-        // error
+        match_error(sym, Token::typesname[t]);
     }
+}
+
+void Parser::match_error(const Token &tk, const string &expect)
+{
+    string message = "\"" + tk.original_value + "\"符号错误，应该输入\"" + expect + "\"类型的符号";
+    perror->printError(tk.line, message);
+    assert(0);
 }
 
 void Parser::Procedure()
@@ -122,7 +133,7 @@ void Parser::ExplanStmt()
         Token id = Ident();
         int prev_proc = proc_index;
         int prev_var_table_index = var_table_index;
-        int prev_var_index = var_index; // 防止函数声明在变量声明前面
+        int prev_var_index = var_index; // 暂存，防止函数声明在变量声明前面
         var_level++;
         var_index = 0;
         var_table_index = -1;
@@ -178,7 +189,7 @@ Token Parser::Ident()
     }
     else
     {
-        // error
+        match_error(sym, Token::typesname[$ID]);
     }
     return sym;
 }
@@ -325,7 +336,7 @@ void Parser::RelOp()
         advance();
         break;
     default:
-        // error();
+        match_error(sym, "关系运算符");
         break;
     }
 }

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include "token.h"
+#include "error.h"
 using namespace std;
 
 class Lexer
@@ -12,11 +13,12 @@ private:
     char cha;     // 存放最新读入的字符
     string token; // 存放已读入的字符序列
     ifstream fin;
-    ofstream fout, ferror;
+    ofstream fout;
     int line;          // 存储当前行号
     char retract_char; // 存储回退的字符
 
     unordered_map<string, int> reserve_map;
+    Error *perror;
     void getchar(); // 读入字符，从源程序文件读入字符到cha
     void getnb();   // 删除空白字符。若cha是空白，则一直调用getchar()
     void concat();  // 连接字符串，将cha中的字符连接到token数组末尾
@@ -59,10 +61,13 @@ private:
     void dump(Token ws);
 
 public:
+    // 分析一个token
     Token analyzeWord();
+    // 分析的同时打印token（用于语法分析）
     Token analyzeAndDumpWord();
-    Lexer(string in_filepath, string out_filepath, string error_path);
-    Lexer(string in_filapath);
-    ~Lexer();
+    // 单独进行完整的词法分析
     void LexicalAnalyze();
+    Lexer(const string &in_filepath, const string &out_filepath, const string &error_filepath);
+    Lexer(const string &in_filepath);
+    ~Lexer();
 };

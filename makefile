@@ -1,4 +1,4 @@
-SRCS = main.cc lexer.cc parser.cc symbol.cc
+SRCS = main.cc lexer.cc parser.cc symbol.cc error.cc token.cc
 TARGET = a.out
 
 all: $(TARGET)
