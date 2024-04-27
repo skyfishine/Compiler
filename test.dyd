@@ -5,6 +5,10 @@
                ; 23
             EOLN 24
          integer 03
+               m 10
+               ; 23
+            EOLN 24
+         integer 03
         function 07
                f 10
                ( 21
