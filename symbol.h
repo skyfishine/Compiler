@@ -50,8 +50,8 @@ private:
 
 public:
     static VarTable *getInstance();
-    int add(string vname, string vproc, VKIND vkind, VTYPE vtype, int vlevel);
-    bool find(const string& varname, int start, int end);
+    int add(const string &vname, const string &vproc, VKIND vkind, VTYPE vtype, int vlevel);
+    bool find(const string &varname, int start, int end);
     void dump(ofstream &out);
     VarTable(VarTable const &) = delete;
     VarTable &operator=(VarTable const &) = delete;
@@ -67,7 +67,7 @@ private:
 
 public:
     static ProcTable *getInstance();
-    int add(string pnmae, VTYPE ptype, int plev);
+    int add(const string &pnmae, VTYPE ptype, int plev);
     string getProcName(int index);
     void fillVarIndex(int index, int fadr, int ladr);
     void dump(ofstream &out);

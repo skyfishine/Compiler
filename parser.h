@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <list>
+#include <unordered_set>
 #include "token.h"
 #include "lexer.h"
 #include "symbol.h"
@@ -12,17 +13,17 @@ class Parser
 {
 private:
     Lexer lexer;
-    Token sym;                // 即将匹配的符号
-    Token look;               // 用于超前查看，若type为error，则表示没有超前查看
-    ofstream fvar, fpro;      // 变量名表，过程名表
-    int var_level;            // 当前变量层次
-    int var_first_index;      // 当前过程第一个变量在符号表的位置
-    int var_last_index;       // 当前过程最后一个变量在符号表的位置
-    int proc_level;           // 当前过程层次
-    int proc_index;           // 当前过程在过程表的下标
-    list<string> formal_vars; // 形参列表
-    VarTable *vartable;       // 变量名表
-    ProcTable *proctable;     // 过程名表
+    Token sym;           // 即将匹配的符号
+    Token look;          // 用于超前查看，若type为error，则表示没有超前查看
+    ofstream fvar, fpro; // 变量名表，过程名表
+    int var_level;       // 当前变量层次
+    int var_first_index; // 当前过程第一个变量在符号表的位置
+    int var_last_index;  // 当前过程最后一个变量在符号表的位置
+    int proc_level;      // 当前过程层次
+    int proc_index;      // 当前过程在过程表的下标
+    // list<string> formal_vars; // 形参列表
+    VarTable *vartable;   // 变量名表
+    ProcTable *proctable; // 过程名表
     Error *perror;
 
     // 匹配单词符号，读入下一符号
@@ -34,6 +35,11 @@ private:
     // 匹配单词符号,并读入下一符号
     void match(TOKEN_TYPE t);
 
+    // 尝试匹配符号t，如果匹配不上，则报错，然后不断读入下一个token，直到出现predict
+    void try_match(TOKEN_TYPE t, TOKEN_TYPE predict);
+
+    void try_match(TOKEN_TYPE t, unordered_set<TOKEN_TYPE> predict);
+
     // 错误处理程序
     // 符号不匹配错误
     void match_error(const Token &tk, const string &expect);
@@ -43,8 +49,13 @@ private:
     // 符号未定义错误
     void notdefined_error(const Token &tk);
 
-    // 判断当前变量是否为形参
-    bool isInFormalList(const string &var);
+    // 错误恢复程序
+    // 反复读入下一个符号，直到t为止
+    void recover(TOKEN_TYPE t);
+
+    // 错误恢复程序
+    // 反复读入下一个符号，直到tk为止
+    void recover(unordered_set<TOKEN_TYPE> predict);
 
     // <程序> -> <分程序>
     // <Program> -> <SubProgram>
@@ -140,7 +151,7 @@ private:
     void RelOp();
 
 public:
-    Parser(string in_filepath);
+    Parser(const string &in_filepath);
     void analyze();
     ~Parser();
 };

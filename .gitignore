@@ -1,0 +1,9 @@
+*.out
+*.pas
+*.dyd
+*.dys
+*.err
+*.var
+*.pro
+/debug
+/ErrorTest

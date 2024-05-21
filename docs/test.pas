@@ -1,7 +1,7 @@
 begin
   integer k;
   integer m;
-  integer function f(n);
+  integer function f(integer n);
     begin
       integer n;
       if n<=0 then f:=1

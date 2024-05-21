@@ -5,7 +5,7 @@ using namespace std;
 
 unordered_map<TOKEN_TYPE, string> Token::typesname;
 
-Parser::Parser(string in_filepath)
+Parser::Parser(const string &in_filepath)
     : lexer(in_filepath), look($ERROR), var_level(0), var_first_index(-1), var_last_index(-1), proc_level(0), proc_index(0)
 {
     string filename = in_filepath.substr(0, in_filepath.find('.'));
@@ -62,9 +62,38 @@ void Parser::match(TOKEN_TYPE t)
     }
 }
 
+void Parser::try_match(TOKEN_TYPE t, TOKEN_TYPE predict)
+{
+    if (sym.type == t)
+    {
+        advance();
+    }
+    else
+    {
+        string message = "缺少符号\"" + Token::typesname[t] + "\"";
+        perror->printError(sym.line, message);
+        recover(predict);
+    }
+}
+
+void Parser::try_match(TOKEN_TYPE t, unordered_set<TOKEN_TYPE> predict)
+{
+    if (sym.type == t)
+    {
+        advance();
+    }
+    else
+    {
+        string message = "缺少符号\"" + Token::typesname[t] + "\"";
+        perror->printError(sym.line, message);
+        recover(predict);
+    }
+}
+
 void Parser::match_error(const Token &tk, const string &expect)
 {
-    string message = "\"" + tk.original_value + "\"符号错误，应该输入\"" + expect + "\"类型的符号";
+    // string message = "\"" + tk.original_value + "\"符号错误，应该输入\"" + expect + "\"类型的符号";
+    string message = "\"" + tk.original_value + "\"前缺少符号\"" + expect + "\"";
     perror->printError(tk.line, message);
     assert(0);
 }
@@ -92,6 +121,20 @@ void Parser::notdefined_error(const Token &tk)
     }
 }
 
+void Parser::recover(TOKEN_TYPE t)
+{
+    while (sym.type != t && sym.type != $EOF && sym.type != $ERROR)
+        advance();
+    assert(sym.type == t);
+}
+
+void Parser::recover(unordered_set<TOKEN_TYPE> predict)
+{
+    while (predict.count(sym.type) == 0 && sym.type != $EOF && sym.type != $ERROR)
+        advance();
+    assert(predict.count(sym.type) != 0);
+}
+
 void Parser::Procedure()
 {
     SubProgram();
@@ -104,7 +147,8 @@ void Parser::SubProgram()
 {
     // 假设最外层存在过程main
     proc_index = proctable->add("main", VOID, proc_level);
-    match($BEGIN);
+    // match($BEGIN);
+    try_match($BEGIN, $INTEGER);
     ExplanStmtTlb();
     // 说明语句结束，回填
     proctable->fillVarIndex(proc_index, var_first_index, var_last_index);
@@ -133,20 +177,6 @@ void Parser::ExplanStmtTlb_()
     }
 }
 
-bool Parser::isInFormalList(const string &var)
-{
-    auto it = formal_vars.begin();
-    for (; it != formal_vars.end(); it++)
-    {
-        if (*it == var)
-        {
-            formal_vars.erase(it);
-            return true;
-        }
-    }
-    return false;
-}
-
 void Parser::ExplanStmt()
 {
     match($INTEGER);
@@ -160,6 +190,7 @@ void Parser::ExplanStmt()
         // TODO：其实可能没什么意义？因为这样的话中间函数声明的变量会被当成当前函数的
         // 实际上，用proc的数组，然后每个proc中有多个variable，这样的结构更好
         // 但是懒得改代码了！
+        // PS: PASCAL应该只能在前面声明变量？
         int prev_var_first_index = var_first_index;
         int prev_var_last_index = var_last_index;
         var_level++;
@@ -169,7 +200,12 @@ void Parser::ExplanStmt()
         proc_index = proctable->add(id.original_value, INT, proc_level);
         match($LPAR);
         Token param = Param();
-        formal_vars.push_back(param.original_value);
+        var_last_index = vartable->add(param.original_value, id.original_value, FORMAL_PARAM, INT, var_level);
+        if (var_first_index == -1)
+        {
+            var_first_index = var_last_index;
+        }
+        // formal_vars.push_back(param.original_value);
         match($RPAR);
         match($SEM);
         FuncBody();
@@ -183,12 +219,7 @@ void Parser::ExplanStmt()
     else
     {
         Token token = Var();
-        // 查形参列表，看是否为形参
         VKIND kind = VARIABLE;
-        if (isInFormalList(token.original_value))
-        {
-            kind = FORMAL_PARAM;
-        }
         if (double_defined_error(token))
         {
             return;
@@ -227,16 +258,22 @@ Token Parser::Ident()
 
 Token Parser::Param()
 {
+    match($INTEGER);
     return Var();
 }
 
 void Parser::FuncBody()
 {
     match($BEGIN);
-    ExplanStmtTlb();
+    if (sym.type == $INTEGER)
+    {
+        ExplanStmtTlb();
+
+        match($SEM);
+    }
     // 声明语句完毕，所有变量都声明完了，所以可以更新过程名表
+    // TODO: 如果过程没有定义局部变量，也没有传参，如何处理？
     proctable->fillVarIndex(proc_index, var_first_index, var_last_index);
-    match($SEM);
     ExecStmtTlb();
     match($END);
 }
@@ -260,14 +297,31 @@ void Parser::ExecStmtTlb_()
 void Parser::ExecStmt()
 {
     Token tk;
+    string message;
     switch (sym.type)
     {
     case $READ:
         advance();
-        match($LPAR);
+        if (sym.type == $LPAR)
+        {
+            advance();
+        }
+        else
+        {
+            string message = "缺少匹配的左括号";
+            perror->printError(sym.line, message);
+        }
         tk = Var();
         notdefined_error(tk);
-        match($RPAR);
+        if (sym.type == $RPAR)
+        {
+            advance();
+        }
+        else
+        {
+            string message = "缺少匹配的右括号";
+            perror->printError(sym.line, message);
+        }
         break;
     case $WRITE:
         advance();
@@ -284,11 +338,25 @@ void Parser::ExecStmt()
         match($ELSE);
         ExecStmt();
         break;
+    case $INTEGER:
+        message = "不能在执行语句表中编写说明语句";
+        perror->printError(sym.line, message);
+        recover($SEM);
+        break;
     default:
         tk = Var();
         notdefined_error(tk);
-        match($ASSIGN);
-        ArithExp();
+        if (sym.type == $RPAR)
+        {
+            message = "缺少匹配的左括号";
+            perror->printError(tk.line, message);
+            recover({$SEM, $END});
+        }
+        else
+        {
+            try_match($ASSIGN, {$SEM, $END});
+            ArithExp();
+        }
         break;
     }
 }

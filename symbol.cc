@@ -23,7 +23,7 @@ ProcTable *ProcTable::getInstance()
     return proctable;
 }
 
-int VarTable::add(string vname, string vproc, VKIND vkind, VTYPE vtype, int vlevel)
+int VarTable::add(const string &vname, const string &vproc, VKIND vkind, VTYPE vtype, int vlevel)
 {
     table.emplace_back(vname, vproc, vkind, vtype, vlevel, table.size());
     return table.size() - 1;
@@ -64,7 +64,7 @@ void VarTable::dump(ofstream &out)
 
 // 向过程名表填写一条记录
 // 返回当前记录的索引
-int ProcTable::add(string pnmae, VTYPE ptype, int plev)
+int ProcTable::add(const string &pnmae, VTYPE ptype, int plev)
 {
     table.emplace_back(pnmae, ptype, plev, -1, -1);
     return table.size() - 1;
