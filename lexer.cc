@@ -12,17 +12,14 @@ void Lexer::getchar()
         cha = retract_char;
         retract_char = 0;
     }
-    else
+    else if (fin.get(cha).eof())
     {
-        if (fin.get(cha).eof())
-        {
-            cha = -1;
-            return;
-        }
-
-        if (cha == '\n')
-            line++;
+        cha = -1;
+        return;
     }
+
+    if (cha == '\n')
+        line++;
 }
 
 void Lexer::getnb()
@@ -49,20 +46,24 @@ WordStruct Lexer::error(int i)
     switch (i)
     {
     case 1:
-        ferror << "第" << line << "行 ";
-        ferror << "标识符长度过长 \"" << token << "\"" << endl; 
+        ferror << "***LINE:" << line << " ";
+        ferror << "标识符长度溢出 \"" << token << "\"" << endl;
         break;
     case 2:
-        ferror << "第" << line << "行 ";
+        ferror << "***LINE:" << line << " ";
         ferror << "非法字符 \"" << cha << "\"" << endl;
         break;
     case 3:
-        ferror << "第" << line << "行 ";
+        ferror << "***LINE:" << line << " ";
         ferror << "常数常量太大 \"" << token << "\"" << endl;
+        break;
+    case 4:
+        ferror << "***LINE:" << line << " ";
+        ferror << "\":\"后面缺少\"=\"" << endl;
     default:
         break;
     }
-    return {$ERROR, 0, "ERROR"};
+    return {$ERROR, "ERROR"};
 }
 
 bool Lexer::letter()
@@ -92,16 +93,6 @@ int Lexer::reserve()
     }
 }
 
-int Lexer::buildlist()
-{
-    return 0;
-}
-
-int Lexer::dtb()
-{
-    return 0;
-}
-
 char Lexer::type(char ch)
 {
     if (ch >= '0' && ch <= '9')
@@ -123,17 +114,17 @@ WordStruct Lexer::case_letter()
         ++len;
     }
     retract();
-    if(len > 16) {
+    if (len > 16)
+    {
         return error(1);
     }
     int c = reserve();
     if (c == 0)
     {
-        int val = buildlist();
-        return {$ID, val, token};
+        return {$ID, token};
     }
     else
-        return {c, 0, token}; // 关键字
+        return {c, token}; // 关键字
 }
 
 WordStruct Lexer::case_number()
@@ -146,48 +137,51 @@ WordStruct Lexer::case_number()
         ++len;
     }
     retract();
-    if(len>16) {
+    if (len > 16)
+    {
         return error(3);
     }
-    int val = dtb();
-    return {$INT, val, token};
+    return {$INT, token};
 }
 
 WordStruct Lexer::case_lt()
 {
     concat();
     getchar();
-    if (cha == '=') {
+    if (cha == '=')
+    {
         concat();
-        return {$LE, 0, token};
+        return {$LE, token};
     }
-    else if (cha == '>'){
+    else if (cha == '>')
+    {
         concat();
-        return {$NE, 0, token};
+        return {$NE, token};
     }
     retract();
-    return {$LT, 0, token};
+    return {$LT, token};
 }
 
 WordStruct Lexer::case_gt()
 {
     getchar();
     if (cha == '=')
-        return {$GE, 0, ">="};
+        return {$GE, ">="};
     retract();
-    return {$GT, 0, ">"};
+    return {$GT, ">"};
 }
 
 WordStruct Lexer::case_assign()
 {
     concat();
     getchar();
-    if (cha == '='){
+    if (cha == '=')
+    {
         concat();
-        return {$ASSIGN, 0, token};
+        return {$ASSIGN, token};
     }
     else
-        return error(2);
+        return error(4);
 }
 
 WordStruct Lexer::analyzeWord()
@@ -204,17 +198,17 @@ WordStruct Lexer::analyzeWord()
     case '0':
         return case_number();
     case '=':
-        return {$EQ, 0, "="};
+        return {$EQ, "="};
     case '-':
-        return {$SUB, 0, "-"};
+        return {$SUB, "-"};
     case '*':
-        return {$MUL, 0, "*"};
+        return {$MUL, "*"};
     case '(':
-        return {$LPAR, 0, "("};
+        return {$LPAR, "("};
     case ')':
-        return {$RPAR, 0, ")"};
+        return {$RPAR, ")"};
     case ';':
-        return {$SEM, 0, ";"};
+        return {$SEM, ";"};
     case '<':
         return case_lt();
     case '>':
@@ -222,9 +216,9 @@ WordStruct Lexer::analyzeWord()
     case ':':
         return case_assign();
     case '\n':
-        return {$EOLN, 0, "EOLN"};
+        return {$EOLN, "EOLN"};
     case -1:
-        return {$EOF, 0, "EOF"};
+        return {$EOF, "EOF"};
     default:
         return error(2);
     }
@@ -271,18 +265,23 @@ Lexer::~Lexer()
 
 void Lexer::dump(WordStruct ws)
 {
-    if(ws.type == $ERROR) return;
+    if (ws.type == $ERROR)
+        return;
     fout << setw(16) << setfill(' ') << ws.original_value;
     fout << ' ';
     fout << setw(2) << setfill('0') << ws.type;
-    if (ws.type != $EOF)
-        fout << endl;
+    // if (ws.type != $EOF)
+    fout << endl;
 }
 void Lexer::LexicalAnalyze()
 {
-    while (!fin.eof())
+    WordStruct tk;
+    do
     {
-        dump(analyzeWord());
-    }
-    dump({$EOF, 0, "EOF"});
+        tk = analyzeWord();
+        dump(tk);
+
+    } while (tk.type != $EOF);
+    
+    // dump({$EOF, "EOF"});
 }

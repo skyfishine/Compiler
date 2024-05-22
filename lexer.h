@@ -8,7 +8,6 @@ using namespace std;
 struct WordStruct
 {
     int type;
-    int value;
     string original_value;
 };
 
@@ -38,15 +37,6 @@ private:
     // 查到，返回保留字的类别编码；否则返回0
     // 假设0不是任何单词符号的类别编码
     int reserve();
-
-    // 对token中的字符串查符号表
-    // 如果查到，返回位置编号；否则将其存放入符号表，并返回其位置编号
-    int buildlist();
-
-    // 将token中的数字串（字符串）转换为二进制值，查常数表
-    // 已存在：返回编号
-    // 不存在：存放入常数表，返回位置编号
-    int dtb();
 
     // 处理出现的词法错误
     // 非法字符、不正确常量...
