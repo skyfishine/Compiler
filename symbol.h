@@ -71,6 +71,7 @@ public:
     string getProcName(int index);
     void fillVarIndex(int index, int fadr, int ladr);
     void dump(ofstream &out);
+    bool find(const string &procname);
     ProcTable(ProcTable const &) = delete;
     ProcTable &operator=(ProcTable const &) = delete;
     ~ProcTable() = default;

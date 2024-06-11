@@ -1,4 +1,5 @@
 #include "error.h"
+#include <iostream>
 
 Error *Error::error = nullptr;
 
@@ -17,8 +18,11 @@ void Error::initError(const string &ferror_path)
 
 void Error::printError(int line, string message)
 {
-    ferror << "第" << line << "行\t";
+    if(!isError) isError = true;
+    ferror << "***LINE:" << line << "\t";
     ferror << message << endl;
+    std::cerr << "***LINE:" << line << "\t";
+    std::cerr << message << std::endl;
 }
 
 Error::~Error()

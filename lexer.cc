@@ -220,7 +220,6 @@ Token Lexer::analyzeWord()
     default:
         return error(2);
     }
-    // return Token();
 }
 
 void Lexer::createReserveMap()

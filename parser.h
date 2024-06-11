@@ -35,19 +35,17 @@ private:
     // 匹配单词符号,并读入下一符号
     void match(TOKEN_TYPE t);
 
-    // 尝试匹配符号t，如果匹配不上，则报错，然后不断读入下一个token，直到出现predict
-    void try_match(TOKEN_TYPE t, TOKEN_TYPE predict);
-
-    void try_match(TOKEN_TYPE t, unordered_set<TOKEN_TYPE> predict);
-
     // 错误处理程序
     // 符号不匹配错误
     void match_error(const Token &tk, const string &expect);
 
     bool double_defined_error(const Token &tk);
 
-    // 符号未定义错误
-    void notdefined_error(const Token &tk);
+    // 变量未定义错误
+    void var_notdefined_error(const Token &tk);
+
+    // 过程未定义错误
+    void proc_notdefined_error(const Token &tk);
 
     // 错误恢复程序
     // 反复读入下一个符号，直到t为止

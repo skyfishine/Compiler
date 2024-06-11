@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <assert.h>
+#include <algorithm>
 #include "symbol.h"
 
 VarTable *VarTable::vartable = nullptr;
@@ -31,10 +32,12 @@ int VarTable::add(const string &vname, const string &vproc, VKIND vkind, VTYPE v
 
 bool VarTable::find(const string &varname, int start, int end)
 {
-    assert(start>=0 && start<(int)table.size());
-    assert(end>=0 && end < (int)table.size());
-    for(int i=start;i<=end;i++) {
-        if(table[i].vname == varname) {
+    assert(start >= 0 && start < (int)table.size());
+    assert(end >= 0 && end < (int)table.size());
+    for (int i = start; i <= end; i++)
+    {
+        if (table[i].vname == varname)
+        {
             return true;
         }
     }
@@ -100,4 +103,12 @@ void ProcTable::fillVarIndex(int index, int fadr, int ladr)
 {
     table[index].fadr = fadr;
     table[index].ladr = ladr;
+}
+
+bool ProcTable::find(const string &procname)
+{
+    auto pos = find_if(table.begin(), table.end(), [&](const Proc& p){
+        return procname == p.pname;
+    });
+    return pos != table.end();
 }

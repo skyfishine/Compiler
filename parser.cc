@@ -62,40 +62,12 @@ void Parser::match(TOKEN_TYPE t)
     }
 }
 
-void Parser::try_match(TOKEN_TYPE t, TOKEN_TYPE predict)
-{
-    if (sym.type == t)
-    {
-        advance();
-    }
-    else
-    {
-        string message = "缺少符号\"" + Token::typesname[t] + "\"";
-        perror->printError(sym.line, message);
-        recover(predict);
-    }
-}
-
-void Parser::try_match(TOKEN_TYPE t, unordered_set<TOKEN_TYPE> predict)
-{
-    if (sym.type == t)
-    {
-        advance();
-    }
-    else
-    {
-        string message = "缺少符号\"" + Token::typesname[t] + "\"";
-        perror->printError(sym.line, message);
-        recover(predict);
-    }
-}
-
 void Parser::match_error(const Token &tk, const string &expect)
 {
     // string message = "\"" + tk.original_value + "\"符号错误，应该输入\"" + expect + "\"类型的符号";
-    string message = "\"" + tk.original_value + "\"前缺少符号\"" + expect + "\"";
+    string message = "\"" + tk.original_value + "\"前缺少\"" + expect + "\"";
     perror->printError(tk.line, message);
-    assert(0);
+    throw ParserException(tk.line, message);
 }
 
 bool Parser::double_defined_error(const Token &tk)
@@ -110,50 +82,91 @@ bool Parser::double_defined_error(const Token &tk)
     return false;
 }
 
-void Parser::notdefined_error(const Token &tk)
+void Parser::var_notdefined_error(const Token &tk)
 {
     if (var_first_index == -1 ||
         (!vartable->find(tk.original_value, var_first_index, var_last_index) &&
          tk.original_value != proctable->getProcName(proc_index)))
     {
-        string message = "符号\"" + tk.original_value + "\"未定义";
+        string message = "标识符\"" + tk.original_value + "\"未定义";
+        perror->printError(tk.line, message);
+    }
+}
+
+void Parser::proc_notdefined_error(const Token &tk)
+{
+    assert(tk.type == $ID);
+    if (!proctable->find(tk.original_value))
+    {
+        string message = "过程\"" + tk.original_value + "\"未定义";
         perror->printError(tk.line, message);
     }
 }
 
 void Parser::recover(TOKEN_TYPE t)
 {
-    while (sym.type != t && sym.type != $EOF && sym.type != $ERROR)
+    do
+    {
         advance();
+    } while (sym.type != t && sym.type != $EOF && sym.type != $ERROR);
     assert(sym.type == t);
 }
 
 void Parser::recover(unordered_set<TOKEN_TYPE> predict)
 {
-    while (predict.count(sym.type) == 0 && sym.type != $EOF && sym.type != $ERROR)
+    do
+    {
         advance();
-    assert(predict.count(sym.type) != 0);
+    } while (predict.count(sym.type) == 0 && sym.type != $EOF && sym.type != $ERROR);
+    // assert(predict.count(sym.type) != 0);
 }
 
 void Parser::Procedure()
 {
     SubProgram();
-    lexer.analyzeAndDumpWord(); // 最后输出eof
     vartable->dump(fvar);
     proctable->dump(fpro);
+    if (!perror->getIsError())
+        cout << "Parsing succeeded" << endl;
 }
 
 void Parser::SubProgram()
 {
     // 假设最外层存在过程main
     proc_index = proctable->add("main", VOID, proc_level);
-    // match($BEGIN);
-    try_match($BEGIN, $INTEGER);
+    try
+    {
+        match($BEGIN);
+    }
+    catch (ParserException e)
+    {
+        recover($INTEGER);
+    }
     ExplanStmtTlb();
     // 说明语句结束，回填
     proctable->fillVarIndex(proc_index, var_first_index, var_last_index);
-    match($SEM);
+
+    try
+    {
+        match($SEM);
+    }
+    catch (ParserException e)
+    {
+        do
+        {
+            recover($SEM);
+            advance();
+        } while (sym.type == $BEGIN);
+    }
+
     ExecStmtTlb();
+    try
+    {
+        match($END); // 在匹配$END之后，自然会再匹配下一个token此时就能够把最后的eof读出来了
+    }
+    catch (ParserException e)
+    {
+    }
 }
 
 void Parser::ExplanStmtTlb()
@@ -168,7 +181,7 @@ void Parser::ExplanStmtTlb_()
     {
         // 超前查看，解决冲突
         lookahead();
-        if (look.type == $INTEGER)
+        if (look.type == $INTEGER || look.type == $SEM)
         {
             advance();
             ExplanStmt();
@@ -179,60 +192,74 @@ void Parser::ExplanStmtTlb_()
 
 void Parser::ExplanStmt()
 {
-    match($INTEGER);
-    // 函数说明语句
-    if (sym.type == $FUNCTION)
+    if (sym.type == $SEM)
     {
-        advance();
-        Token id = Ident();
-        int prev_proc = proc_index;
-        // 暂存，防止函数声明在变量声明前面
-        // TODO：其实可能没什么意义？因为这样的话中间函数声明的变量会被当成当前函数的
-        // 实际上，用proc的数组，然后每个proc中有多个variable，这样的结构更好
-        // 但是懒得改代码了！
-        // PS: PASCAL应该只能在前面声明变量？
-        int prev_var_first_index = var_first_index;
-        int prev_var_last_index = var_last_index;
-        var_level++;
-        var_first_index = -1;
-        var_last_index = -1;
-        proc_level++;
-        proc_index = proctable->add(id.original_value, INT, proc_level);
-        match($LPAR);
-        Token param = Param();
-        var_last_index = vartable->add(param.original_value, id.original_value, FORMAL_PARAM, INT, var_level);
-        if (var_first_index == -1)
-        {
-            var_first_index = var_last_index;
-        }
-        // formal_vars.push_back(param.original_value);
-        match($RPAR);
-        match($SEM);
-        FuncBody();
-        var_level--;
-        proc_level--;
-        proc_index = prev_proc;
-        var_first_index = prev_var_first_index;
-        var_last_index = prev_var_last_index;
+        string message = "说明语句不能为空";
+        perror->printError(sym.line, message);
+        return;
     }
-    // 变量说明语句
-    else
+    try
     {
-        Token token = Var();
-        VKIND kind = VARIABLE;
-        if (double_defined_error(token))
+        match($INTEGER);
+        // 函数说明语句
+        if (sym.type == $FUNCTION)
         {
-            return;
-        }
-        // 加入到变量表
-        var_last_index = vartable->add(token.original_value, proctable->getProcName(proc_index), kind, INT, var_level);
-        // 如果是当前过程的第一个变量
-        if (var_first_index == -1)
-        {
-            var_first_index = var_last_index;
-        }
+            advance();
+            Token id = Ident();
+            int prev_proc = proc_index;
+            int prev_var_first_index = var_first_index;
+            int prev_var_last_index = var_last_index;
+            var_level++;
+            var_first_index = -1;
+            var_last_index = -1;
+            proc_level++;
+            proc_index = proctable->add(id.original_value, INT, proc_level);
+            try
+            {
+                match($LPAR);
+                Token param = Param();
+                var_last_index = vartable->add(param.original_value, id.original_value, FORMAL_PARAM, INT, var_level);
+                if (var_first_index == -1)
+                {
+                    var_first_index = var_last_index;
+                }
+                match($RPAR);
+                match($SEM);
+                FuncBody();
+            }
+            catch (ParserException e)
+            {
+                recover($SEM);
+            }
 
-        // error 可能要错误处理
+            var_level--;
+            proc_level--;
+            proc_index = prev_proc;
+            var_first_index = prev_var_first_index;
+            var_last_index = prev_var_last_index;
+        }
+        // 变量说明语句
+        else
+        {
+            Token token = Var();
+            VKIND kind = VARIABLE;
+            if (double_defined_error(token))
+            {
+                return;
+            }
+            // 加入到变量表
+            var_last_index = vartable->add(token.original_value, proctable->getProcName(proc_index), kind, INT, var_level);
+            // 如果是当前过程的第一个变量
+            if (var_first_index == -1)
+            {
+                var_first_index = var_last_index;
+            }
+        }
+    }
+    catch (ParserException e)
+    {
+        // 可能抛出异常的情况：match函数，Var()
+        recover($SEM); // 恢复程序，直到出现分号
     }
 }
 
@@ -258,7 +285,12 @@ Token Parser::Ident()
 
 Token Parser::Param()
 {
-    match($INTEGER);
+    try
+    {
+        match($INTEGER);
+    }
+    catch(ParserException e) {
+    }
     return Var();
 }
 
@@ -298,66 +330,90 @@ void Parser::ExecStmt()
 {
     Token tk;
     string message;
-    switch (sym.type)
+    if (sym.type == $SEM || sym.type == $END)
     {
-    case $READ:
-        advance();
-        if (sym.type == $LPAR)
-        {
-            advance();
-        }
-        else
-        {
-            string message = "缺少匹配的左括号";
-            perror->printError(sym.line, message);
-        }
-        tk = Var();
-        notdefined_error(tk);
-        if (sym.type == $RPAR)
-        {
-            advance();
-        }
-        else
-        {
-            string message = "缺少匹配的右括号";
-            perror->printError(sym.line, message);
-        }
-        break;
-    case $WRITE:
-        advance();
-        match($LPAR);
-        tk = Var();
-        notdefined_error(tk);
-        match($RPAR);
-        break;
-    case $IF:
-        advance();
-        CondExp();
-        match($THEN);
-        ExecStmt();
-        match($ELSE);
-        ExecStmt();
-        break;
-    case $INTEGER:
-        message = "不能在执行语句表中编写说明语句";
+        message = "执行语句不能为空";
         perror->printError(sym.line, message);
-        recover($SEM);
-        break;
-    default:
-        tk = Var();
-        notdefined_error(tk);
-        if (sym.type == $RPAR)
+        return;
+    }
+
+    try
+    {
+        switch (sym.type)
         {
-            message = "缺少匹配的左括号";
-            perror->printError(tk.line, message);
-            recover({$SEM, $END});
+        case $READ:
+            advance();
+            if (sym.type == $LPAR)
+            {
+                advance();
+            }
+            else
+            {
+                string message = "缺少匹配的左括号";
+                perror->printError(sym.line, message);
+            }
+            tk = Var();
+            var_notdefined_error(tk);
+            if (sym.type == $RPAR)
+            {
+                advance();
+            }
+            else
+            {
+                string message = "缺少匹配的右括号";
+                perror->printError(sym.line, message);
+            }
+            break;
+        case $WRITE:
+            advance();
+            match($LPAR);
+            tk = Var();
+            var_notdefined_error(tk);
+            match($RPAR);
+            break;
+        case $IF:
+            advance();
+            CondExp();
+            match($THEN);
+            ExecStmt();
+            match($ELSE);
+            ExecStmt();
+            break;
+        case $INTEGER:
+            message = "不能在执行语句表中编写说明语句";
+            perror->printError(sym.line, message);
+            // 可以调用声明语句的过程，解析声明语句
+            ExplanStmt();
+            break;
+        default:
+            tk = Var();
+            var_notdefined_error(tk);
+            if (sym.type == $RPAR)
+            {
+                message = "缺少匹配的左括号";
+                perror->printError(tk.line, message);
+                recover({$SEM, $END});
+            }
+            else
+            {
+                if (sym.type == $ASSIGN)
+                {
+                    advance();
+                    ArithExp();
+                }
+                else
+                {
+                    message = "赋值语句缺少\":=\"";
+                    perror->printError(sym.line, message);
+                    recover({$SEM, $END});
+                }
+            }
+            break;
         }
-        else
-        {
-            try_match($ASSIGN, {$SEM, $END});
-            ArithExp();
-        }
-        break;
+    }
+    catch (ParserException)
+    {
+        recover({$SEM, $END});
     }
 }
 
@@ -395,20 +451,23 @@ void Parser::Item_()
 
 void Parser::Factor()
 {
-    // 标识符or函数调用
+    // 变量or过程调用
     if (sym.type == $ID)
     {
         Token tk = sym;
         advance();
         if (sym.type == $LPAR)
         {
+            // 过程调用
+            proc_notdefined_error(tk);
             advance();
             ArithExp();
             match($RPAR);
         }
         else
         {
-            notdefined_error(tk);
+            // 变量引用
+            var_notdefined_error(tk);
         }
     }
     else
@@ -419,7 +478,8 @@ void Parser::Factor()
 
 void Parser::FuncCall()
 {
-    Ident();
+    Token tk = Ident();
+    proc_notdefined_error(tk);
     match($LPAR);
     ArithExp();
     match($RPAR);
