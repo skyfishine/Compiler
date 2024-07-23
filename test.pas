@@ -6,7 +6,7 @@ begin
       if n<=0 then f:=1
       else f:=n*f(n-1)
     end;
-  read(m)
+  read(m);
   k:=f(m);
-  write(k);
+  write(k)
 end

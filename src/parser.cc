@@ -194,7 +194,7 @@ void Parser::ExplanStmt()
 {
     if (sym.type == $SEM)
     {
-        string message = "说明语句不能为空";
+        string message = "缺少合法的说明语句或执行语句";
         perror->printError(sym.line, message);
         return;
     }
@@ -332,7 +332,7 @@ void Parser::ExecStmt()
     string message;
     if (sym.type == $SEM || sym.type == $END)
     {
-        message = "执行语句不能为空";
+        message = "缺少合法的执行语句";
         perror->printError(sym.line, message);
         return;
     }
